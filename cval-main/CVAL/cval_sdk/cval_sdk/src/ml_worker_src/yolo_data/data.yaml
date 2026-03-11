@@ -1,0 +1,6 @@
+train: /app/ml_worker_src/yolo_data/images
+val: /app/ml_worker_src/yolo_data/images
+test: /app/ml_worker_src/yolo_data/images
+
+nc: 2
+names: ["dog", "cat"]

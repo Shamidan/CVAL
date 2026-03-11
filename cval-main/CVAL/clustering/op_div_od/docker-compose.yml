@@ -1,0 +1,9 @@
+services:
+  op_div_od:
+    restart: always
+    build:
+      context: .
+      dockerfile: op_div_od.Dockerfile
+    ports:
+      - "5004:5004"
+    command: "uvicorn app:app --host 0.0.0.0 --port 5004"

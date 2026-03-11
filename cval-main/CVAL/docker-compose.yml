@@ -1,0 +1,78 @@
+version: '3.9'
+
+networks:
+  default:
+    name: cvat_cvat
+    external: true
+
+
+services:
+  cval_sampling:
+    build:
+      context: ./cval_sampling  # Указываем директорию с сервисом
+    ports:
+      - "8000:8000"  # Открываем порт для внешнего доступа
+    volumes:
+      - ./cval_sampling:/app  # Для разработки: монтируем код внутрь контейнера
+  cval_bus:
+    build:
+      context: ./bus  # Путь к директории сервиса
+    ports:
+      - "8001:8001"  # Открываем порт
+    env_file:
+      - ./bus/.env  # Подключаем файл с переменными окружения
+    volumes:
+      - ./bus/data:/app/data  # Для хранения базы данных SQLite
+
+  cval_hook:
+    build:
+      context: cval_sdk  # Путь к проекту
+      dockerfile: cval_sdk/src/annotation/Dockerfile
+    ports:
+      - "8002:8002"  # Открываем порт для внешнего доступа
+    env_file:
+      - cval_sdk/cval_sdk/src/ml_worker_src/.env  # Общий env файл
+    depends_on:
+      - cval_bus  # Зависимость от шины данных
+    #volumes:
+    #  - ./cval_sdk/src:/app  # Подключение кода внутрь контейнера
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+
+  cval_ml_worker:
+    build:
+        context: cval_sdk  # Путь к проекту
+        dockerfile: /cval_sdk/src/ml_worker_src/Dockerfile
+    ports:
+        - "8003:8003"  # Порт (если нужен доступ извне)
+    env_file:
+        - cval_sdk/cval_sdk/src/ml_worker_src/.env  # Общий env файл
+    depends_on:
+        - cval_bus  # Зависимость от шины данных
+        - cval_embedings
+        - cval_hook
+    environment:
+      - PYTHONPATH=/app
+    working_dir: /app
+
+  cval_embedings:
+    build:
+      context: embedings
+      dockerfile: src/Dockerfile
+    ports:
+      - "8005:8005"
+    # env_file:
+    environment:
+      - PYTHONPATH=/src
+    working_dir: /src
+
+
+  cval_op_div_od:
+    restart: always
+    build:
+      context: clustering
+      dockerfile: op_div_od/op_div_od.Dockerfile
+    ports:
+      - "5004:5004"
+    command: "uvicorn app:app --host 0.0.0.0 --port 5004"
